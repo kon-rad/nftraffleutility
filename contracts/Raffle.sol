@@ -7,21 +7,19 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
-contract Raffle is VRFConsumerBaseV2, ERC721Holder {
+contract RaffleUtility is VRFConsumerBaseV2, ERC721Holder {
     using SafeMath for uint256;
 
-    mapping(uint256 => address) private s_rollers;
-    mapping(address => uint256) private s_results;
-
-    uint64 subscriptionId;
-    address vrfCoordinator;
-    bytes32 keyHash;
-    uint32 callbackGasLimit = 40000;
-    uint16 requestConfirmations = 3;
-    uint32 numWords =  1;
-    VRFCoordinatorV2Interface COORDINATOR;
+    uint64 internal subscriptionId;
+    address internal vrfCoordinator;
+    bytes32 internal keyHash;
+    uint32 internal callbackGasLimit = 40000;
+    uint16 internal requestConfirmations = 3;
+    uint32 internal numWords =  1;
+    VRFCoordinatorV2Interface internal COORDINATOR;
     address public admin;
     uint256 public adminFeePercent = 3;
+    uint256 public rafflesCount = 0;
 
     enum Status {
         Active,
@@ -48,7 +46,6 @@ contract Raffle is VRFConsumerBaseV2, ERC721Holder {
 
     mapping(uint256 => Raffle) public raffles;
     mapping(uint256 => uint256) public requestIdToRaffle;
-    uint256 rafflesCount = 0;
 
     event RaffleCreated(uint256 id, string name);
     event RaffleFinished(uint256 id, string name, uint256 winnerIndex);
@@ -65,7 +62,7 @@ contract Raffle is VRFConsumerBaseV2, ERC721Holder {
     modifier onlyAdmin() {
         require(
             msg.sender == admin,
-            "This function is restricted to the admin"
+            "Restricted to the admin"
         );
         _;
     }
@@ -73,7 +70,7 @@ contract Raffle is VRFConsumerBaseV2, ERC721Holder {
     modifier onlyOwner(uint256 _raffleId) {
         require(
             msg.sender == raffles[_raffleId].owner,
-            "This function is restricted to the owner"
+            "Restricted to the owner"
         );
         _;
     }
@@ -81,13 +78,13 @@ contract Raffle is VRFConsumerBaseV2, ERC721Holder {
     modifier onlyActive(uint256 _raffleId) {
         require(
             raffles[_raffleId].status == Status.Active,
-            "The raffle already finished"
+            "Already finished"
         );
         _;
     }
 
     modifier onlyFinished(uint256 _raffleId) {
-        require(raffles[_raffleId].status == Status.Finished, "The raffle is not finished");
+        require(raffles[_raffleId].status == Status.Finished, "Not finished");
         _;
     }
 
@@ -100,8 +97,8 @@ contract Raffle is VRFConsumerBaseV2, ERC721Holder {
         uint256 _ticketGoal,
         uint256 _raffleDurationDays
     ) public {
-        require(_ticketGoal >= 10, "Ticket goal must be 10 or greater");
-        require(_ticketGoal <= 1000000, "Ticket goal must be less than 1,000,000");
+        require(_ticketGoal >= 10, "Must be 10 or greater");
+        require(_ticketGoal <= 1000000, "Must be less than 1,000,000");
 
         // transfer NFT to raffle contract
         IERC721(_prizeNFTAddress).safeTransferFrom(msg.sender, address(this), _prizeNFTTokenId);
@@ -160,33 +157,39 @@ contract Raffle is VRFConsumerBaseV2, ERC721Holder {
     }
     
     function fulfillRandomWords(
-        uint256 requestId,
-        uint256[] memory randomWords
+        uint256 _requestId,
+        uint256[] memory _randomWords
     ) internal override {
-        uint256 _raffleId = requestIdToRaffle[requestId];
+        uint256 _raffleId = requestIdToRaffle[_requestId];
         Raffle storage raffle = raffles[_raffleId];
-        raffle.winnerIndex = randomWords[0];
-        address winner = raffle.tickets[randomWords[0]];
+        raffle.winnerIndex = _randomWords[0];
+        address winner = raffle.tickets[_randomWords[0]];
 
         // transfer NFT to winner
         IERC721(raffle.prizeNFTAddress).safeTransferFrom(address(this), address(winner), raffle.prizeNFTTokenId);
 
-        // send raffle funds to owner
+        // send raffle funds to owner and send admin share
         uint256 adminShare = raffle.balance.div(100).mul(adminFeePercent);
         payable(address(admin)).transfer(adminShare);
         payable(address(raffle.owner)).transfer(raffle.balance.sub(adminShare));
+        raffle.balance = 0;
 
         emit RaffleFinished(_raffleId, raffle.name, raffle.winnerIndex);
     }
 
     function buyRaffleTicket(uint256 _raffleId, uint256 _numOfTickets) public onlyActive(_raffleId) payable {
+        uint256 total = _numOfTickets.mul(raffles[_raffleId].ticketPrice);
         require(_numOfTickets > 0, "Must buy at least one ticket");
         require(_numOfTickets < raffles[_raffleId].tickets.length + raffles[_raffleId].ticketGoal, "Not enough tickets to sell");
-        require(_numOfTickets.mul(raffles[_raffleId].ticketPrice) <= msg.value, "Not enough to pay for tickets");
-        raffles[_raffleId].balance = raffles[_raffleId].balance.add(_numOfTickets.mul(raffles[_raffleId].ticketPrice));
+        require(total <= msg.value, "Not enough to pay for tickets");
+        raffles[_raffleId].balance = raffles[_raffleId].balance.add(total);
         uint256 i = 0;
         for (i; i < _numOfTickets; i++) {
             raffles[_raffleId].tickets.push(msg.sender);
+        }
+        // send back excess funds
+        if (msg.value > total) {
+            payable(address(msg.sender)).transfer(msg.value.sub(total));
         }
     }
 }
