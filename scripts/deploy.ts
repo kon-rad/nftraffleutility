@@ -10,13 +10,14 @@ async function main() {
   const SUBSCRIPTION_ID = 423;
   const VRF_COORDINATOR = "0x7a1BaC17Ccc5b313516C5E16fb24f7659aA5ebed";
   const KEY_HASH = "0x4b09e658ed251bcafeebbc69400383d49f344ace09b9576fe248bb02c003fe9f";
-  
-  const Greeter = await ethers.getContractFactory("Greeter");
-  const greeter = await Greeter.deploy("Hello, Hardhat!");
 
-  await greeter.deployed();
+  const RaffleUtility = await ethers.getContractFactory("RaffleUtility");
+  // constructor(uint64 _subscriptionId, address _vrfCoordinator, bytes32 _keyHash) VRFConsumerBaseV2(_vrfCoordinator) {
+  const raffleUtility = await RaffleUtility.deploy(SUBSCRIPTION_ID, VRF_COORDINATOR, KEY_HASH);
 
-  console.log("Greeter deployed to:", greeter.address);
+  await raffleUtility.deployed();
+
+  console.log("RaffleUtility deployed to:", raffleUtility.address);
 }
 
 // We recommend this pattern to be able to use async/await everywhere

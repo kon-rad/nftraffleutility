@@ -55,7 +55,7 @@ contract RaffleUtility is VRFConsumerBaseV2, ERC721Holder {
         vrfCoordinator = _vrfCoordinator;
         keyHash = _keyHash;
         COORDINATOR = VRFCoordinatorV2Interface(_vrfCoordinator);
-        admin = msg.sender;
+        admin = payable(msg.sender);
         subscriptionId = _subscriptionId;
     }
 

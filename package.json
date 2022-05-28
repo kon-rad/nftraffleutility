@@ -1,5 +1,10 @@
 {
   "name": "hardhat-project",
+  "scripts": {
+    "deploy:local": "npx hardhat run scripts/deploy.ts --network hardhat",
+    "deploy:mumbai": "npx hardhat run scripts/deploy.ts --network mumbai",
+    "compile": "npx hardhat compile"
+  },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.6",
     "@nomiclabs/hardhat-etherscan": "^3.0.3",
