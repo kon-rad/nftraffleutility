@@ -21,10 +21,12 @@ contract Raffle is VRFConsumerBaseV2 {
     uint32 callbackGasLimit = 40000;
     uint16 requestConfirmations = 3;
     uint32 numWords =  1;
+    VRFCoordinatorV2Interface COORDINATOR;
 
     enum Status {
         Active,
-        Finished
+        Finished,
+        Pending
     }
 
     struct Raffle {
@@ -48,10 +50,12 @@ contract Raffle is VRFConsumerBaseV2 {
     uint256 public adminBalance;
 
     mapping(uint256 => Raffle) public raffles;
+    mapping(uint256 => uint256) public raffleToRandomRequestId;
     uint256 rafflesCount = 0;
 
     event RaffleCreated(uint256 id, string name);
     event RaffleFinished(uint256 id, string name);
+    event RafflePending(uint256 id, string name, uint256 requestId);
 
     constructor(uint64 _subscriptionId, address _vrfCoordinator, bytes32 _keyHash) VRFConsumerBaseV2(_vrfCoordinator) {
         vrfCoordinator = _vrfCoordinator;
@@ -136,12 +140,30 @@ contract Raffle is VRFConsumerBaseV2 {
     }
 
     function _finishRaffle(uint256 _raffleId) internal {
+        require(LINK.balanceOf(address(this)) >= fee, "Not enough LINK - fill contract with faucet");
         Raffle storage raffle = raffles[_raffleId];
         if (raffle.tickets.length == 0) {
             raffle.status = Status.Finished;
             return;
         }
-        uint256 winnerIndex = 
+
+        uint256 requestId = COORDINATOR.requestRandomWords(
+            keyHash,
+            subscriptionId,
+            requestConfirmations,
+            callbackGasLimit,
+            numWords
+        );
+        raffle.status = Status.Pending;
+        raffleToRandomRequestId[requestId] = _raffleId;
+        emit RafflePending(_raffleId, raffle.name, requestId);
+    }
+    
+    function fulfillRandomWords(
+        uint256, requestId
+        uint256[] memory randomWords
+    ) internal override {
+        s_randomWords = randomWords;
     }
 
     function _finishRaffle(uint256 _raffleId) internal {
@@ -162,6 +184,20 @@ contract Raffle is VRFConsumerBaseV2 {
         require(LINK.balanceOf(address(this)) >= fee, "Not enough LINK - fill contract with faucet");
         return requestRandomness(keyHash, fee);
     }
+
+
+    // Assumes the subscription is funded sufficiently.
+    function requestRandomWords() external onlyOwner {
+        // Will revert if subscription is not set and funded.
+        s_requestId = COORDINATOR.requestRandomWords(
+            keyHash,
+            s_subscriptionId,
+            requestConfirmations,
+            callbackGasLimit,
+            numWords
+        );
+    }
+
 
     // Callback function used by VRF Coordinator
     function fulfillRandomness(bytes32 requestId, uint256 randomness) internal override {
