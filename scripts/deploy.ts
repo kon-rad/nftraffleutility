@@ -7,6 +7,7 @@ import { ethers } from "hardhat";
 
 async function main() {
   
+  // mumbai 
   const SUBSCRIPTION_ID = 423;
   const VRF_COORDINATOR = "0x7a1BaC17Ccc5b313516C5E16fb24f7659aA5ebed";
   const KEY_HASH = "0x4b09e658ed251bcafeebbc69400383d49f344ace09b9576fe248bb02c003fe9f";

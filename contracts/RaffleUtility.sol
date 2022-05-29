@@ -29,7 +29,6 @@ contract RaffleUtility is VRFConsumerBaseV2, ERC721Holder {
 
     struct Raffle {
         string name;
-        string description;
         address owner;
         Status status;
         uint256 winnerIndex;
@@ -90,7 +89,6 @@ contract RaffleUtility is VRFConsumerBaseV2, ERC721Holder {
 
     function createRaffle(
         string memory _name,
-        string memory _description,
         address _prizeNFTAddress,
         uint256 _prizeNFTTokenId,
         uint256 _ticketPrice,
@@ -107,7 +105,6 @@ contract RaffleUtility is VRFConsumerBaseV2, ERC721Holder {
 
         raffle.status = Status.Active;
         raffle.name = _name;
-        raffle.name = _description;
         raffle.owner = msg.sender;
         raffle.balance = 0;
         raffle.prizeNFTAddress = _prizeNFTAddress;
