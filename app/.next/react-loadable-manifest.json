@@ -1,0 +1,18 @@
+{
+  "../.tina/components/TinaDynamicProvider.jsx -> ./TinaProvider": {
+    "id": "./.tina/components/TinaProvider.jsx",
+    "files": [
+      "static/chunks/_tina_components_TinaProvider_jsx.js"
+    ]
+  },
+  "../.tina/schema.ts -> next-tinacms-cloudinary": {
+    "id": "./node_modules/next-tinacms-cloudinary/dist/index.js",
+    "files": [
+      "static/chunks/node_modules_next-tinacms-cloudinary_dist_index_js.js"
+    ]
+  },
+  "../.tina/schema.ts -> tinacms": {
+    "id": "./node_modules/tinacms/dist/index.js",
+    "files": []
+  }
+}
